@@ -1,0 +1,10 @@
+(function(scope){
+  'use strict';
+  function strings(value,depth=0){if(depth>7||value==null)return [];if(typeof value==='string')return [value];if(Array.isArray(value))return value.flatMap(v=>strings(v,depth+1));if(typeof value==='object')return Object.values(value).flatMap(v=>strings(v,depth+1));return []}
+  function pointId(p){const id=p&&typeof p==='object'?(p.id??p.pointId??p.point_id??p._id):null;return typeof id==='string'||typeof id==='number'?id:null}
+  function pointsArray(value){if(Array.isArray(value))return value;if(value&&typeof value==='object'){for(const k of ['points','data','items'])if(Array.isArray(value[k]))return value[k]}return []}
+  function matchPoint(point,records){const leaves=strings(point);const byRecord=records.filter(r=>leaves.some(s=>s===r.record_id));if(byRecord.length===1)return {record:byRecord[0],method:'record_id'};if(byRecord.length>1)return null;const byTitle=records.filter(r=>leaves.some(s=>s===r.title));if(byTitle.length===1)return {record:byTitle[0],method:'exact title'};if(byTitle.length>1)return null;const byContent=records.filter(r=>leaves.some(s=>s===r.content));return byContent.length===1?{record:byContent[0],method:'exact content'}:null}
+  function indexPoints(raw,records){const points=pointsArray(raw),matched=[],recordIds=new Set(),pointIds=new Set();for(const point of points){const id=pointId(point),m=matchPoint(point,records);if(id==null||!m||recordIds.has(m.record.record_id)||pointIds.has(String(id)))continue;matched.push({id,record:m.record,method:m.method});recordIds.add(m.record.record_id);pointIds.add(String(id))}return {points,matched}}
+  function selectedIds(snapshot){const values=[snapshot?.selected,snapshot?.currentSelection].flatMap(v=>Array.isArray(v)?v:v!=null?[v]:[]);return [...new Set(values.map(v=>typeof v==='object'?pointId(v):v).filter(v=>typeof v==='string'||typeof v==='number').map(String))]}
+  const api={strings,pointId,pointsArray,matchPoint,indexPoints,selectedIds};scope.AtlasBridge=api;if(typeof module!=='undefined')module.exports=api;
+})(typeof window!=='undefined'?window:globalThis);
